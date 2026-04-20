@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const email = req.nextUrl.searchParams.get("email");
   if (!email) return NextResponse.json({ subscriptionId: null });
 
-  const shop = await prisma.barbershop.findUnique({
-    where: { slug: params.slug },
-    select: { id: true },
-  });
+  const shop = await prisma.barbershop.findUnique({ where: { slug }, select: { id: true } });
   if (!shop) return NextResponse.json({ subscriptionId: null });
 
   const user = await prisma.user.findUnique({ where: { email } });

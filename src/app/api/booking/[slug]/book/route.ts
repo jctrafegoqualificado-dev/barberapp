@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
 
-export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
+    const { slug } = await params;
     const { clientName, clientEmail, clientPhone, barberId, serviceId, date, startTime, subscriptionId } =
       await req.json();
 
-    const shop = await prisma.barbershop.findUnique({ where: { slug: params.slug } });
+    const shop = await prisma.barbershop.findUnique({ where: { slug } });
     if (!shop) return NextResponse.json({ error: "Barbearia não encontrada" }, { status: 404 });
 
     const service = await prisma.service.findUnique({ where: { id: serviceId } });

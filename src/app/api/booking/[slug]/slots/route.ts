@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
+    const { slug } = await params;
     const { searchParams } = new URL(req.url);
     const date = searchParams.get("date");
     const barberId = searchParams.get("barberId");
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       return NextResponse.json({ error: "Parâmetros obrigatórios" }, { status: 400 });
     }
 
-    const shop = await prisma.barbershop.findUnique({ where: { slug: params.slug } });
+    const shop = await prisma.barbershop.findUnique({ where: { slug } });
     if (!shop) return NextResponse.json({ error: "Não encontrada" }, { status: 404 });
 
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
@@ -24,7 +25,6 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     const openingHour = await prisma.openingHour.findFirst({
       where: { barbershopId: shop.id, dayOfWeek, isOpen: true },
     });
-
     if (!openingHour) return NextResponse.json({ slots: [] });
 
     const [openH, openM] = openingHour.openTime.split(":").map(Number);
@@ -32,27 +32,17 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
     const openMinutes = openH * 60 + openM;
     const closeMinutes = closeH * 60 + closeM;
 
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
+    const dayStart = new Date(date); dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date); dayEnd.setHours(23, 59, 59, 999);
 
     const existing = await prisma.appointment.findMany({
-      where: {
-        barberId,
-        date: { gte: dayStart, lte: dayEnd },
-        status: { not: "CANCELLED" },
-      },
+      where: { barberId, date: { gte: dayStart, lte: dayEnd }, status: { not: "CANCELLED" } },
     });
 
     const slots: string[] = [];
-    const step = 30;
-
-    for (let m = openMinutes; m + service.duration <= closeMinutes; m += step) {
+    for (let m = openMinutes; m + service.duration <= closeMinutes; m += 30) {
       const hh = String(Math.floor(m / 60)).padStart(2, "0");
       const mm = String(m % 60).padStart(2, "0");
-      const slot = `${hh}:${mm}`;
-
       const slotEnd = m + service.duration;
       const conflict = existing.some((a) => {
         const [ah, am] = a.startTime.split(":").map(Number);
@@ -61,8 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
         const aEnd = eh * 60 + em;
         return m < aEnd && slotEnd > aStart;
       });
-
-      if (!conflict) slots.push(slot);
+      if (!conflict) slots.push(`${hh}:${mm}`);
     }
 
     return NextResponse.json({ slots });

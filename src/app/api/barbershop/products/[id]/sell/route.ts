@@ -2,19 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const payload = requireAuth(req, ["OWNER", "BARBER"]);
+    const { id } = await params;
     const { quantity, clientId } = await req.json();
     const qty = Number(quantity) || 1;
 
-    const product = await prisma.product.findUnique({ where: { id: params.id } });
+    const product = await prisma.product.findUnique({ where: { id } });
     if (!product) return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
     if (product.stock > 0 && product.stock < qty) {
       return NextResponse.json({ error: `Estoque insuficiente (${product.stock} disponível)` }, { status: 400 });
     }
 
-    // Descobre o barberId se for barbeiro
     let barberId: string | null = null;
     if (payload.role === "BARBER") {
       const barber = await prisma.barber.findUnique({ where: { userId: payload.id } });
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     const sale = await prisma.productSale.create({
       data: {
-        productId: params.id,
+        productId: id,
         barbershopId: payload.barbershopId!,
         barberId,
         clientId: clientId || null,
@@ -34,12 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       include: { product: true, barber: { include: { user: { select: { name: true } } } } },
     });
 
-    // Baixa no estoque se controlado
     if (product.stock > 0) {
-      await prisma.product.update({
-        where: { id: params.id },
-        data: { stock: { decrement: qty } },
-      });
+      await prisma.product.update({ where: { id }, data: { stock: { decrement: qty } } });
     }
 
     return NextResponse.json({ sale }, { status: 201 });
