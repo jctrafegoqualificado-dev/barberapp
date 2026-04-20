@@ -27,8 +27,9 @@ const ownerNav = [
 
 const barberNav = [
   { href: "/barbeiro", label: "Minha Agenda", icon: Calendar },
-  { href: "/barbeiro/clientes", label: "Clientes", icon: Users },
+  { href: "/barbeiro/producao", label: "Produção", icon: TrendingUp },
   { href: "/barbeiro/comissoes", label: "Comissões", icon: CreditCard },
+  { href: "/barbeiro/clientes", label: "Clientes", icon: Users },
   { href: "/painel/kanban", label: "Tarefas", icon: KanbanSquare },
 ];
 
