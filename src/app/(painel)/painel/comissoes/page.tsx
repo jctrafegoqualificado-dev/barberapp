@@ -37,9 +37,16 @@ function TypeToggle({ value, onChange }: { value: CommType; onChange: (v: CommTy
   );
 }
 
+interface ComissaoUpdate {
+  commissionType: CommType;
+  commission: string;
+  productCommissionType: CommType;
+  productCommission: string;
+}
+
 function BarberCard({ barber, onSave }: {
   barber: BarberComissao;
-  onSave: (id: string, data: Partial<BarberComissao>) => Promise<void>;
+  onSave: (id: string, data: ComissaoUpdate) => Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -240,7 +247,7 @@ export default function ComissoesPage() {
 
   useEffect(() => { load(); }, []);
 
-  async function handleSave(barberId: string, data: Record<string, unknown>) {
+  async function handleSave(barberId: string, data: ComissaoUpdate) {
     await fetch("/api/barbershop/comissoes", {
       method: "PATCH",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },

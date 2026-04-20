@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
     // Assinaturas ativas por cliente
     const subscriptions = await prisma.subscription.findMany({
       where: { barbershopId, status: "ACTIVE" },
-      include: { plan: { select: { name: true } } },
       select: { clientId: true, plan: { select: { name: true } } },
     });
     const subByClient: Record<string, string> = {};
